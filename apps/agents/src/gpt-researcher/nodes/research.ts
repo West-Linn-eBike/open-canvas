@@ -4,7 +4,7 @@ import { getStringFromContent } from "../../utils.js";
 
 const GPT_RESEARCHER_MCP_COMMAND = process.env.GPT_RESEARCHER_MCP_COMMAND || "npx";
 const GPT_RESEARCHER_MCP_ARGS = process.env.GPT_RESEARCHER_MCP_ARGS
-  ? process.env.GPT_RESEARCHER_MCP_ARGS.split(",")
+  ? process.env.GPT_RESEARCHER_MCP_ARGS.split(",").map((arg) => arg.trim())
   : ["-y", "gpt-researcher-mcp"];
 
 /**
@@ -32,7 +32,10 @@ export async function research(
       ? { GOOGLE_API_KEY: process.env.GOOGLE_API_KEY }
       : {}),
     ...(process.env.GPT_RESEARCHER_LLM_PROVIDER
-      ? { llm_provider: process.env.GPT_RESEARCHER_LLM_PROVIDER }
+      ? {
+          // Note: gpt-researcher-mcp uses lowercase 'llm_provider' for this env var
+          llm_provider: process.env.GPT_RESEARCHER_LLM_PROVIDER,
+        }
       : {}),
     ...(process.env.GPT_RESEARCHER_FAST_LLM
       ? { FAST_LLM: process.env.GPT_RESEARCHER_FAST_LLM }
