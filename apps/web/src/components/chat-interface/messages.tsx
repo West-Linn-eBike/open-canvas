@@ -25,7 +25,7 @@ import { HumanMessage } from "@langchain/core/messages";
 import { OC_HIDE_FROM_UI_KEY } from "@opencanvas/shared/constants";
 import { Button } from "../ui/button";
 import { WEB_SEARCH_RESULTS_QUERY_PARAM } from "@/constants";
-import { Globe } from "lucide-react";
+import { Globe, Microscope } from "lucide-react";
 import { useQueryState } from "nuqs";
 
 interface AssistantMessageProps {
@@ -100,6 +100,34 @@ const WebSearchMessageComponent = ({ message }: { message: MessageState }) => {
 
 const WebSearchMessage = React.memo(WebSearchMessageComponent);
 
+const GptResearcherMessageComponent = ({
+  message,
+}: {
+  message: MessageState;
+}) => {
+  const researchStatus = (
+    message as unknown as { additional_kwargs?: Record<string, unknown> }
+  ).additional_kwargs?.researchStatus;
+  const isResearching = researchStatus === "researching";
+
+  return (
+    <div className="flex mx-8">
+      <Button
+        variant="secondary"
+        className="bg-purple-50 hover:bg-purple-100 transition-all ease-in-out duration-200 w-full cursor-default"
+        disabled={isResearching}
+      >
+        <Microscope className="size-4 mr-2" />
+        {isResearching
+          ? "Deep Research in progress…"
+          : "Deep Research Complete"}
+      </Button>
+    </div>
+  );
+};
+
+const GptResearcherMessage = React.memo(GptResearcherMessageComponent);
+
 export const AssistantMessage: FC<AssistantMessageProps> = ({
   runId,
   feedbackSubmitted,
@@ -109,6 +137,9 @@ export const AssistantMessage: FC<AssistantMessageProps> = ({
   const { isLast } = message;
   const isThinkingMessage = message.id.startsWith("thinking-");
   const isWebSearchMessage = message.id.startsWith("web-search-results-");
+  const isGptResearcherMessage = message.id.startsWith(
+    "gpt-researcher-results-"
+  );
 
   if (isThinkingMessage) {
     return <ThinkingAssistantMessage message={message} />;
@@ -116,6 +147,10 @@ export const AssistantMessage: FC<AssistantMessageProps> = ({
 
   if (isWebSearchMessage) {
     return <WebSearchMessage message={message} />;
+  }
+
+  if (isGptResearcherMessage) {
+    return <GptResearcherMessage message={message} />;
   }
 
   return (

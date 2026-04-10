@@ -23,6 +23,7 @@ import { WEB_SEARCH_RESULTS_QUERY_PARAM } from "@/constants";
 import {
   DEFAULT_INPUTS,
   OC_WEB_SEARCH_RESULTS_MESSAGE_KEY,
+  OC_GPT_RESEARCHER_RESULTS_MESSAGE_KEY,
 } from "@opencanvas/shared/constants";
 import {
   ALL_MODEL_NAMES,
@@ -78,6 +79,8 @@ interface GraphData {
   chatStarted: boolean;
   searchEnabled: boolean;
   setSearchEnabled: Dispatch<SetStateAction<boolean>>;
+  deepResearchEnabled: boolean;
+  setDeepResearchEnabled: Dispatch<SetStateAction<boolean>>;
   setChatStarted: Dispatch<SetStateAction<boolean>>;
   setIsStreaming: Dispatch<SetStateAction<boolean>>;
   setFeedbackSubmitted: Dispatch<SetStateAction<boolean>>;
@@ -142,6 +145,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState(false);
   const [artifactUpdateFailed, setArtifactUpdateFailed] = useState(false);
   const [searchEnabled, setSearchEnabled] = useState(false);
+  const [deepResearchEnabled, setDeepResearchEnabled] = useState(false);
 
   const [_, setWebSearchResultsId] = useQueryState(
     WEB_SEARCH_RESULTS_QUERY_PARAM
@@ -311,6 +315,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
         highlightedText: selectedBlocks,
       }),
       webSearchEnabled: searchEnabled,
+      gptResearcherEnabled: deepResearchEnabled,
     };
     // Add check for multiple defined fields
     const fieldsToCheck = [
@@ -395,6 +400,9 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       // The ID of the message for the web search operation during this turn
       let webSearchMessageId = "";
 
+      // The ID of the message for the GPT Researcher operation during this turn
+      let gptResearcherMessageId = "";
+
       for await (const chunk of stream) {
         if (chunk.event === "error") {
           const errorMessage =
@@ -450,6 +458,25 @@ export function GraphProvider({ children }: { children: ReactNode }) {
               });
               // Set the query param to trigger the UI
               setWebSearchResultsId(webSearchMessageId);
+            }
+
+            if (langgraphNode === "research" && !gptResearcherMessageId) {
+              gptResearcherMessageId = `gpt-researcher-results-${uuidv4()}`;
+              // Deep research is starting. Add a placeholder message.
+              setMessages((prev) => {
+                return [
+                  ...prev,
+                  new AIMessage({
+                    id: gptResearcherMessageId,
+                    content: "",
+                    additional_kwargs: {
+                      [OC_GPT_RESEARCHER_RESULTS_MESSAGE_KEY]: true,
+                      researchReport: "",
+                      researchStatus: "researching",
+                    },
+                  }),
+                ];
+              });
             }
           }
 
@@ -1206,6 +1233,28 @@ export function GraphProvider({ children }: { children: ReactNode }) {
               });
             }
 
+            if (langgraphNode === "research" && gptResearcherMessageId) {
+              const output = nodeOutput as {
+                researchReport?: string;
+                researchComplete?: boolean;
+              };
+
+              setMessages((prev) => {
+                return prev.map((m) => {
+                  if (m.id !== gptResearcherMessageId) return m;
+
+                  return new AIMessage({
+                    ...m,
+                    additional_kwargs: {
+                      ...m.additional_kwargs,
+                      researchReport: output.researchReport || "",
+                      researchStatus: "done",
+                    },
+                  });
+                });
+              });
+            }
+
             if (
               langgraphNode === "generateArtifact" &&
               !generateArtifactToolCallStr &&
@@ -1429,6 +1478,8 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       artifactUpdateFailed,
       searchEnabled,
       setSearchEnabled,
+      deepResearchEnabled,
+      setDeepResearchEnabled,
       setChatStarted,
       setIsStreaming,
       setFeedbackSubmitted,

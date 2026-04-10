@@ -116,6 +116,15 @@ export async function generatePath(
     };
   }
 
+  if (state.gptResearcherEnabled) {
+    return {
+      next: "gptResearcher",
+      ...(newMessages.length
+        ? { messages: newMessages, _messages: newMessages }
+        : {}),
+    };
+  }
+
   // Check if any URLs are in the latest message. If true, determine if the contents should be included
   // inline in the prompt, and if so, scrape the contents and update the prompt.
   const messageUrls = extractURLsFromLastMessage(state._messages);
