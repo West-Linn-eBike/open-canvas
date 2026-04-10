@@ -226,4 +226,6 @@ export interface GraphInput {
 
   webSearchEnabled?: boolean;
   webSearchResults?: SearchResult[];
+
+  gptResearcherEnabled?: boolean;
 }

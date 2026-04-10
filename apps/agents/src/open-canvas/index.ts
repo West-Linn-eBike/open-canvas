@@ -15,7 +15,8 @@ import { updateHighlightedText } from "./nodes/updateHighlightedText.js";
 import { OpenCanvasGraphAnnotation } from "./state.js";
 import { summarizer } from "./nodes/summarizer.js";
 import { graph as webSearchGraph } from "../web-search/index.js";
-import { createAIMessageFromWebResults } from "../utils.js";
+import { graph as gptResearcherGraph } from "../gpt-researcher/index.js";
+import { createAIMessageFromWebResults, createAIMessageFromResearchReport } from "../utils.js";
 
 const routeNode = (state: typeof OpenCanvasGraphAnnotation.State) => {
   if (!state.next) {
@@ -105,6 +106,37 @@ function routePostWebSearch(
   });
 }
 
+/**
+ * Updates state & routes the graph based on the GPT Researcher report result.
+ */
+function routePostGptResearcher(
+  state: typeof OpenCanvasGraphAnnotation.State
+): Send | Command {
+  const includesArtifacts = state.artifact?.contents?.length > 1;
+
+  if (!state.researchReport) {
+    return new Send(
+      includesArtifacts ? "rewriteArtifact" : "generateArtifact",
+      {
+        ...state,
+        gptResearcherEnabled: false,
+      }
+    );
+  }
+
+  const researchMessage = createAIMessageFromResearchReport(state.researchReport);
+
+  return new Command({
+    goto: includesArtifacts ? "rewriteArtifact" : "generateArtifact",
+    update: {
+      gptResearcherEnabled: false,
+      researchReport: undefined,
+      messages: [researchMessage],
+      _messages: [researchMessage],
+    },
+  });
+}
+
 const builder = new StateGraph(OpenCanvasGraphAnnotation)
   // Start node & edge
   .addNode("generatePath", generatePath)
@@ -125,6 +157,8 @@ const builder = new StateGraph(OpenCanvasGraphAnnotation)
   .addNode("summarizer", summarizer)
   .addNode("webSearch", webSearchGraph)
   .addNode("routePostWebSearch", routePostWebSearch)
+  .addNode("gptResearcher", gptResearcherGraph)
+  .addNode("routePostGptResearcher", routePostGptResearcher)
   // Initial router
   .addConditionalEdges("generatePath", routeNode, [
     "updateArtifact",
@@ -136,6 +170,7 @@ const builder = new StateGraph(OpenCanvasGraphAnnotation)
     "customAction",
     "updateHighlightedText",
     "webSearch",
+    "gptResearcher",
   ])
   // Edges
   .addEdge("generateArtifact", "generateFollowup")
@@ -146,6 +181,7 @@ const builder = new StateGraph(OpenCanvasGraphAnnotation)
   .addEdge("rewriteCodeArtifactTheme", "generateFollowup")
   .addEdge("customAction", "generateFollowup")
   .addEdge("webSearch", "routePostWebSearch")
+  .addEdge("gptResearcher", "routePostGptResearcher")
   // End edges
   .addEdge("replyToGeneralInput", "cleanState")
   // Only reflect if an artifact was generated/updated.

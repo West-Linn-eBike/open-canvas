@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { CirclePlus, Globe } from "lucide-react";
+import { CirclePlus, Globe, Microscope } from "lucide-react";
 import { useState } from "react";
 import { ComposerAddAttachment } from "../assistant-ui/attachment";
 import { AssistantSelect } from "../assistant-select";
@@ -20,21 +20,33 @@ export function ComposerActionsPopOut(props: ComposerActionsPopOutProps) {
   const [isAssistantSelectOpen, setIsAssistantSelectOpen] = useState(false);
   const [isMouseOver, setIsMouseOver] = useState(false);
   const {
-    graphData: { searchEnabled, setSearchEnabled },
+    graphData: {
+      searchEnabled,
+      setSearchEnabled,
+      deepResearchEnabled,
+      setDeepResearchEnabled,
+    },
   } = useGraphContext();
   const { selectedAssistant } = useAssistantContext();
   const isDefaultSelected = !!selectedAssistant?.metadata?.is_default;
 
+  const activeIconCount =
+    (searchEnabled ? 1 : 0) +
+    (deepResearchEnabled ? 1 : 0) +
+    (!isDefaultSelected ? 1 : 0);
+
+  const collapsedWidth =
+    activeIconCount === 0
+      ? "40px"
+      : activeIconCount === 1
+        ? "80px"
+        : activeIconCount === 2
+          ? "120px"
+          : "160px";
+
   const containerVariants = {
     collapsed: {
-      width:
-        searchEnabled && !isDefaultSelected
-          ? "120px"
-          : searchEnabled
-            ? "80px"
-            : !isDefaultSelected
-              ? "80px"
-              : "40px",
+      width: collapsedWidth,
       transition: {
         type: "spring",
         stiffness: 500,
@@ -42,7 +54,7 @@ export function ComposerActionsPopOut(props: ComposerActionsPopOutProps) {
       },
     },
     expanded: {
-      width: "160px",
+      width: "200px",
       transition: {
         type: "spring",
         stiffness: 500,
@@ -105,6 +117,16 @@ export function ComposerActionsPopOut(props: ComposerActionsPopOutProps) {
               <Globe />
             </TooltipIconButton>
           )}
+          {deepResearchEnabled && (
+            <TooltipIconButton
+              tooltip="Deep research (GPT Researcher)"
+              variant="ghost"
+              className="size-7 flex-shrink-0 bg-purple-100 hover:bg-purple-100"
+              onClick={() => setDeepResearchEnabled((p) => !p)}
+            >
+              <Microscope />
+            </TooltipIconButton>
+          )}
           {!isDefaultSelected && (
             <AssistantSelect
               userId={props.userId}
@@ -137,6 +159,16 @@ export function ComposerActionsPopOut(props: ComposerActionsPopOutProps) {
                   onClick={() => setSearchEnabled((p) => !p)}
                 >
                   <Globe />
+                </TooltipIconButton>
+              )}
+              {!deepResearchEnabled && (
+                <TooltipIconButton
+                  tooltip="Deep research (GPT Researcher)"
+                  variant="ghost"
+                  className="size-7 flex-shrink-0 hover:bg-purple-100 transition-colors ease-in-out"
+                  onClick={() => setDeepResearchEnabled((p) => !p)}
+                >
+                  <Microscope />
                 </TooltipIconButton>
               )}
               {isDefaultSelected && (

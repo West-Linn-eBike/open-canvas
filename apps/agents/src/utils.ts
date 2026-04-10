@@ -21,6 +21,7 @@ import {
 import {
   CONTEXT_DOCUMENTS_NAMESPACE,
   OC_WEB_SEARCH_RESULTS_MESSAGE_KEY,
+  OC_GPT_RESEARCHER_RESULTS_MESSAGE_KEY,
 } from "@opencanvas/shared/constants";
 import {
   TEMPERATURE_EXCLUDED_MODELS,
@@ -638,4 +639,20 @@ export function getStringFromContent(content: MessageContent): string {
   return content
     .flatMap((c) => ("text" in c ? (c.text as string) : []))
     .join("\n");
+}
+
+export function createAIMessageFromResearchReport(
+  researchReport: string
+): AIMessage {
+  const content = `Here is a comprehensive research report I generated using GPT Researcher. This may be useful as context:\n\n${researchReport}`;
+
+  return new AIMessage({
+    content,
+    id: `gpt-researcher-results-${uuidv4()}`,
+    additional_kwargs: {
+      [OC_GPT_RESEARCHER_RESULTS_MESSAGE_KEY]: true,
+      researchReport,
+      researchStatus: "done",
+    },
+  });
 }
